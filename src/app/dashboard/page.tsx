@@ -326,7 +326,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center mb-1">
                   <h3 className="font-bold text-base">Today's Deliveries</h3>
                   <span className="text-xs bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-0.5 rounded-full font-bold">
-                    {todayDeliveries.length} Pending
+                    {todayDeliveries.filter((o: any) => o.status !== 'Delivered').length} Pending
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mb-6">Orders scheduled for collection/delivery today</p>
@@ -346,7 +346,9 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-slate-500 font-medium truncate mb-1.5">{order.orderNumber}</p>
                         <div className="flex gap-1.5">
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full
-                            ${order.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}
+                            ${order.status === 'Delivered' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                              order.status === 'Ready' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                              'bg-amber-500/10 text-amber-600 dark:text-amber-400'}
                           `}>
                             {order.status}
                           </span>
@@ -357,13 +359,13 @@ export default function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Link href={`/dashboard/orders?id=${order._id}`}>
                           <Button variant="outline" size="sm" className="h-8 w-8 !p-0 flex items-center justify-center cursor-pointer">
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
                         </Link>
-                        {order.status !== 'Ready' && (
+                        {order.status !== 'Ready' && order.status !== 'Delivered' && (
                           <Button 
                             variant="primary" 
                             size="sm" 
@@ -382,6 +384,11 @@ export default function DashboardPage() {
                           >
                             Deliver
                           </Button>
+                        )}
+                        {order.status === 'Delivered' && (
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 px-2 py-1 bg-emerald-500/10 rounded-lg">
+                            ✓ Delivered
+                          </span>
                         )}
                       </div>
                     </div>

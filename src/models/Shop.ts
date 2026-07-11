@@ -20,7 +20,10 @@ const ShopSchema = new Schema({
   whatsappTemplateBalance: { 
     type: String, 
     default: 'Hello {patientName}, this is a friendly reminder from {shopName} regarding your pending balance of {balanceAmount} for order {orderNumber}. View details: {receiptUrl} Please make the payment at your convenience. Thank you!' 
-  }
+  },
+  mainDoctor: { type: String, default: 'Dr. Malhotra' },
+  doctors: { type: [String], default: [] },
+  staff: { type: [String], default: [] }
 }, { timestamps: true });
 
 export default mongoose.models.Shop || mongoose.model('Shop', ShopSchema);

@@ -5,6 +5,7 @@ import { Settings, Save, AlertCircle, RefreshCw, MessageSquare } from 'lucide-re
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import { validateName, validatePhone } from '@/lib/validation';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,13 @@ export default function SettingsPage() {
   const [address, setAddress] = useState('');
   const [currency, setCurrency] = useState('INR');
   const [taxRate, setTaxRate] = useState('0');
+  
+  // Doctor & Staff Management
+  const [mainDoctor, setMainDoctor] = useState('Dr. Malhotra');
+  const [doctors, setDoctors] = useState<string[]>([]);
+  const [staff, setStaff] = useState<string[]>([]);
+  const [newDoctorName, setNewDoctorName] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
   
   // WhatsApp Templates
   const [whatsappTemplateOrder, setWhatsappTemplateOrder] = useState('');
@@ -40,6 +48,10 @@ export default function SettingsPage() {
       setWhatsappTemplateOrder(shop.whatsappTemplateOrder || '');
       setWhatsappTemplateReady(shop.whatsappTemplateReady || '');
       setWhatsappTemplateBalance(shop.whatsappTemplateBalance || '');
+
+      setMainDoctor(shop.mainDoctor || 'Dr. Malhotra');
+      setDoctors(shop.doctors || []);
+      setStaff(shop.staff || []);
     } catch (err: any) {
       setError(err.message || 'Error loading settings');
     } finally {
@@ -57,15 +69,36 @@ export default function SettingsPage() {
     setSuccess('');
     setSubmitting(true);
 
+    const nameError = validateName(name);
+    if (nameError) {
+      setError(`Shop ${nameError}`);
+      setSubmitting(false);
+      return;
+    }
+
+    if (phone && phone.trim() !== '') {
+      const phoneError = validatePhone(phone);
+      if (phoneError) {
+        setError(phoneError);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+
     const payload = {
       name,
-      phone,
+      phone: cleanPhone,
       address,
       currency,
       taxRate: parseFloat(taxRate) || 0,
       whatsappTemplateOrder,
       whatsappTemplateReady,
-      whatsappTemplateBalance
+      whatsappTemplateBalance,
+      mainDoctor,
+      doctors,
+      staff
     };
 
     try {
@@ -99,12 +132,7 @@ export default function SettingsPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto pb-12">
       
-      {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-semibold flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-        </div>
-      )}
+
 
       {success && (
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold flex items-center gap-2">
@@ -130,11 +158,12 @@ export default function SettingsPage() {
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <Input
+           <Input
             label="Contact Mobile / Phone"
             placeholder="e.g. 9811075234"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+            maxLength={10}
           />
         </div>
 
@@ -165,6 +194,122 @@ export default function SettingsPage() {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
+      </div>
+
+      {/* Card 1.5: Doctor and Staff Management */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="flex items-center gap-2 text-indigo-500 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <span className="p-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500">🧑‍⚕️</span>
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Optometrist & Staff Directory</h3>
+        </div>
+
+        {/* 1. Main Doctor */}
+        <div className="max-w-md space-y-1.5">
+          <Input
+            label="Main / Owner Doctor *"
+            placeholder="e.g. Dr. Malhotra"
+            value={mainDoctor}
+            onChange={(e) => setMainDoctor(e.target.value)}
+            required
+          />
+          <p className="text-[10px] text-slate-400">This doctor's name will automatically prefill as the default Optometrist on new orders.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          {/* 2. Additional Doctors */}
+          <div className="space-y-4">
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide block">
+              Additional Optometrists / Doctors
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. Dr. Anjali Sharma"
+                value={newDoctorName}
+                onChange={(e) => setNewDoctorName(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 font-medium"
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  if (newDoctorName.trim()) {
+                    setDoctors([...doctors, newDoctorName.trim()]);
+                    setNewDoctorName('');
+                  }
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer px-4 font-bold text-xs"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+              {doctors.length === 0 ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">No additional doctors added.</p>
+              ) : (
+                doctors.map((docName, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs font-bold bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                    <span className="text-slate-700 dark:text-slate-350">{docName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setDoctors(doctors.filter((_, i) => i !== idx))}
+                      className="text-red-500 hover:text-red-700 cursor-pointer font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 3. Staff Members */}
+          <div className="space-y-4">
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide block">
+              Support Staff / Sales Executives
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. Ramesh Kumar"
+                value={newStaffName}
+                onChange={(e) => setNewStaffName(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded-lg text-sm bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 font-medium"
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  if (newStaffName.trim()) {
+                    setStaff([...staff, newStaffName.trim()]);
+                    setNewStaffName('');
+                  }
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer px-4 font-bold text-xs"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+              {staff.length === 0 ? (
+                <p className="text-xs text-slate-400 font-semibold py-2">No staff members added.</p>
+              ) : (
+                staff.map((staffName, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs font-bold bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                    <span className="text-slate-700 dark:text-slate-350">{staffName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setStaff(staff.filter((_, i) => i !== idx))}
+                      className="text-red-500 hover:text-red-700 cursor-pointer font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Card 2: WhatsApp Templates customization */}
@@ -219,6 +364,13 @@ export default function SettingsPage() {
 
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-semibold flex items-center gap-2 animate-fade-in">
+          <AlertCircle className="w-5 h-5" />
+          {error}
+        </div>
+      )}
 
       {/* Save Settings Action Button */}
       <div className="flex justify-end pt-2">

@@ -6,6 +6,7 @@ import { Search, Plus, User, Phone, MapPin, Eye, Edit2, Trash2, X, AlertCircle }
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import { validateName, validatePhone, validateEmail } from '@/lib/validation';
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<any[]>([]);
@@ -50,18 +51,34 @@ export default function PatientsPage() {
     setError('');
     setSubmitting(true);
 
-    if (!name || !phone) {
-      setError('Name and Phone number are required');
+    const nameError = validateName(name);
+    if (nameError) {
+      setError(`Patient ${nameError}`);
+      setSubmitting(false);
+      return;
+    }
+
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
+      setError(phoneError);
+      setSubmitting(false);
+      return;
+    }
+
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      setSubmitting(false);
+      return;
+    }
+
+    if (age && (parseInt(age) < 0 || parseInt(age) > 200)) {
+      setError('Age must be between 0 and 200');
       setSubmitting(false);
       return;
     }
 
     const cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length !== 10) {
-      setError('Phone number must contain exactly 10 digits (e.g. 9811075234)');
-      setSubmitting(false);
-      return;
-    }
 
     try {
       const res = await fetch('/api/patients', {
@@ -241,12 +258,6 @@ export default function PatientsPage() {
 
             {/* Modal Body / Form */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
@@ -269,7 +280,8 @@ export default function PatientsPage() {
                   label="Phone / Mobile *"
                   placeholder="e.g. 9811075234"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                  maxLength={10}
                   required
                 />
                 <Input
@@ -287,7 +299,14 @@ export default function PatientsPage() {
                   type="number"
                   placeholder="e.g. 42"
                   value={age}
-                  onChange={(e) => setAge(e.target.value)}
+                  min={0}
+                  max={200}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 200)) {
+                      setAge(val);
+                    }
+                  }}
                 />
                 <Select
                   label="Gender"
@@ -318,6 +337,13 @@ export default function PatientsPage() {
                   className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 h-20"
                 />
               </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
+              )}
 
               {/* Modal Footer */}
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-white dark:bg-slate-900">

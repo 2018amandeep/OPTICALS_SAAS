@@ -228,7 +228,7 @@ export async function GET(req: NextRequest) {
         totalCollections: stats.totalCollections,
         todaySales: todayStats.sales,
         todayCollections: todayStats.collections,
-        todayDeliveriesCount: todayDeliveries.length,
+        todayDeliveriesCount: todayDeliveries.filter((o: any) => o.status !== 'Delivered').length,
         pendingBalancesCount: pendingBalances.length
       },
       todayDeliveries,

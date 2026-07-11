@@ -13,7 +13,8 @@ import {
   X, 
   Sun, 
   Moon,
-  Eye
+  Eye,
+  UserCheck
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -83,6 +84,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Patients', href: '/dashboard/patients', icon: Users },
     { name: 'Orders & Prescriptions', href: '/dashboard/orders', icon: FileText },
+    { name: 'Optometrist & Staff', href: '/dashboard/directory', icon: UserCheck },
     { name: 'Shop Settings', href: '/dashboard/settings', icon: Settings },
   ];
 

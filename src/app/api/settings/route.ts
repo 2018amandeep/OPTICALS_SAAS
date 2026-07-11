@@ -36,7 +36,19 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     
     // We prevent changing email and password here
-    const { name, phone, address, currency, taxRate, whatsappTemplateOrder, whatsappTemplateReady, whatsappTemplateBalance } = body;
+    const { 
+      name, 
+      phone, 
+      address, 
+      currency, 
+      taxRate, 
+      whatsappTemplateOrder, 
+      whatsappTemplateReady, 
+      whatsappTemplateBalance,
+      mainDoctor,
+      doctors,
+      staff
+    } = body;
 
     const shop = await Shop.findByIdAndUpdate(
       user.shopId,
@@ -49,7 +61,10 @@ export async function PUT(req: NextRequest) {
           taxRate: taxRate !== undefined ? Number(taxRate) : undefined,
           whatsappTemplateOrder,
           whatsappTemplateReady,
-          whatsappTemplateBalance
+          whatsappTemplateBalance,
+          mainDoctor,
+          doctors,
+          staff
         }
       },
       { new: true, runValidators: true }

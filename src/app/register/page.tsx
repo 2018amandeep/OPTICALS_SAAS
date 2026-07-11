@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { validateName, validatePhone, validateEmail } from '@/lib/validation';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,6 +21,29 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    const nameError = validateName(name);
+    if (nameError) {
+      setError(`Shop ${nameError}`);
+      setIsLoading(false);
+      return;
+    }
+
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      setIsLoading(false);
+      return;
+    }
+
+    if (phone && phone.trim() !== '') {
+      const phoneError = validatePhone(phone);
+      if (phoneError) {
+        setError(phoneError);
+        setIsLoading(false);
+        return;
+      }
+    }
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -59,15 +83,6 @@ export default function RegisterPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Get started with OptiFlow SaaS platform</p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              {error}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Shop / Business Name"
@@ -90,7 +105,8 @@ export default function RegisterPage() {
                 label="Phone / Mobile"
                 placeholder="e.g. 9811075234"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                maxLength={10}
               />
             </div>
 
@@ -110,6 +126,15 @@ export default function RegisterPage() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                {error}
+              </div>
+            )}
 
             <Button
               type="submit"

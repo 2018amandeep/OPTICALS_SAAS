@@ -3,7 +3,7 @@ import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
 import Patient from '@/models/Patient';
 import { getAuthUser } from '@/lib/auth';
-import { validatePrescription, validateIpd } from '@/lib/validation';
+import { validatePrescription, validateIpd, validateOrderRequirements } from '@/lib/validation';
 
 // GET: Fetch all orders for the shop
 export async function GET(req: NextRequest) {
@@ -91,8 +91,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    // Validate required fields (amount > 0 and prescription presence)
+    const reqsError = validateOrderRequirements(body);
+    if (reqsError) {
+      return NextResponse.json({ error: reqsError }, { status: 400 });
+    }
     
-    // Validate prescription
+    // Validate prescription format/ranges
     const prescriptionError = validatePrescription(body.prescription);
     if (prescriptionError) {
       return NextResponse.json({ error: prescriptionError }, { status: 400 });

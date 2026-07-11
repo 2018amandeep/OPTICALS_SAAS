@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 import Order from '@/models/Order';
-import { validatePrescription, validateIpd } from '@/lib/validation';
+import { validatePrescription, validateIpd, validateOrderRequirements } from '@/lib/validation';
 
 type Context = {
   params: Promise<{ id: string }>
@@ -47,7 +47,13 @@ export async function PUT(req: NextRequest, context: Context) {
     const { id } = await context.params;
     const body = await req.json();
 
-    // Validate prescription
+    // Validate required fields (amount > 0 and prescription presence)
+    const reqsError = validateOrderRequirements(body);
+    if (reqsError) {
+      return NextResponse.json({ error: reqsError }, { status: 400 });
+    }
+
+    // Validate prescription format/ranges
     const prescriptionError = validatePrescription(body.prescription);
     if (prescriptionError) {
       return NextResponse.json({ error: prescriptionError }, { status: 400 });

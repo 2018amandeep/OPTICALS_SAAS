@@ -75,6 +75,10 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   const [patientNotes, setPatientNotes] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [optometrist, setOptometrist] = useState('Dr. Malhotra');
+  const [optometristSelect, setOptometristSelect] = useState('');
+  const [customOptometrist, setCustomOptometrist] = useState('');
+  const [defaultDoctorName, setDefaultDoctorName] = useState('Dr. Malhotra');
+  const [directoryStaff, setDirectoryStaff] = useState<any[]>([]);
   const [bookingDate, setBookingDate] = useState(new Date().toISOString().slice(0, 10));
   const [deliveryDate, setDeliveryDate] = useState('');
   
@@ -122,6 +126,30 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
           setPatientId(prefilledPatientId);
         }
 
+        // Fetch staff directory to prefill mainDoctor and options list
+        const staffRes = await fetch('/api/staff');
+        let staffList: any[] = [];
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          staffList = staffData.staff || [];
+          setDirectoryStaff(staffList);
+        }
+
+        // Fetch logged-in user details to get owner doctor fallback name
+        const authRes = await fetch('/api/auth/me');
+        let loggedInName = 'Dr. Malhotra';
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.shop?.name) {
+            loggedInName = authData.shop.name;
+          }
+        }
+
+        // Determine main/default doctor from directory, fallback to logged-in user name
+        const mainDocObj = staffList.find((s: any) => s.role === 'Doctor' && s.isMainDoctor && s.isActive);
+        const mainDocName = mainDocObj ? mainDocObj.name : loggedInName;
+        setDefaultDoctorName(mainDocName);
+
         // If in Edit Mode, fetch order details
         if (isEdit) {
           const orderRes = await fetch(`/api/orders/${orderId}`);
@@ -130,7 +158,19 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
           const order = orderData.order;
 
           setPatientId(order.patientId?._id || '');
-          setOptometrist(order.optometrist || '');
+          
+          const orderOpt = order.optometrist || '';
+          setOptometrist(orderOpt);
+          
+          // Determine if it matches configured doctors/staff
+          const registeredNames = staffList.map((s: any) => s.name);
+
+          if (registeredNames.includes(orderOpt)) {
+            setOptometristSelect(orderOpt);
+          } else {
+            setOptometristSelect('Custom');
+            setCustomOptometrist(orderOpt);
+          }
           setBookingDate(new Date(order.bookingDate).toISOString().slice(0, 10));
           setDeliveryDate(new Date(order.deliveryDate).toISOString().slice(0, 10));
           
@@ -161,6 +201,10 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
 
           setStatus(order.status || 'Ordered');
           setNotes(order.notes || '');
+        } else {
+          // Prefill with Main Doctor in create mode
+          setOptometrist(mainDocName);
+          setOptometristSelect(mainDocName);
         }
       } catch (err: any) {
         setError(err.message || 'Error loading form data');
@@ -178,11 +222,33 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
     setBalance(Math.max(0, amt - adv));
   }, [amount, advance]);
 
+  // Sync optometrist select / custom input with optometrist state
+  useEffect(() => {
+    if (optometristSelect === 'Custom') {
+      setOptometrist(customOptometrist);
+    } else {
+      setOptometrist(optometristSelect);
+    }
+  }, [optometristSelect, customOptometrist]);
+
   // Fetch patient history details when patientId is selected
   useEffect(() => {
     if (!patientId) {
       setPatientHistory(null);
       setPatientNotes('');
+      if (!isEdit) {
+        setSphOD('');
+        setCylOD('');
+        setAxisOD('');
+        setVsnOD('');
+        setAddOD('');
+        setSphOS('');
+        setCylOS('');
+        setAxisOS('');
+        setVsnOS('');
+        setAddOS('');
+        setIpd('');
+      }
       return;
     }
     
@@ -194,6 +260,30 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
           const data = await res.json();
           setPatientHistory(data);
           setPatientNotes(data.patient?.notes || '');
+
+          // Prefill last eye prescription if in Create mode and past order exists
+          if (!isEdit && data.orders && data.orders.length > 0) {
+            const lastOrder = data.orders[0];
+            const p = lastOrder.prescription || {};
+            const r = p.right || {};
+            const l = p.left || {};
+
+            setSphOD(r.sph || '');
+            setCylOD(r.cyl || '');
+            setAxisOD(r.axis || '');
+            setVsnOD(r.vsn || '');
+            setAddOD(r.add || '');
+
+            setSphOS(l.sph || '');
+            setCylOS(l.cyl || '');
+            setAxisOS(l.axis || '');
+            setVsnOS(l.vsn || '');
+            setAddOS(l.add || '');
+
+            if (lastOrder.ipd) {
+              setIpd(lastOrder.ipd);
+            }
+          }
         }
       } catch (err) {
         console.error('Error fetching patient history:', err);
@@ -202,7 +292,7 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
       }
     }
     fetchPatientDetails();
-  }, [patientId]);
+  }, [patientId, isEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,6 +307,24 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
 
     if (!deliveryDate) {
       setError('Delivery date is required');
+      setSubmitting(false);
+      return;
+    }
+
+    // Validate Amount is filled and positive
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Billing amount must be greater than 0');
+      setSubmitting(false);
+      return;
+    }
+
+    // Validate that at least one prescription parameter is filled
+    const isPrescriptionEmpty = (
+      !sphOD && !cylOD && !axisOD && !vsnOD && !addOD &&
+      !sphOS && !cylOS && !axisOS && !vsnOS && !addOS
+    );
+    if (isPrescriptionEmpty) {
+      setError('Prescription details (SPH, CYL, AXIS, VSN, or ADD) are required');
       setSubmitting(false);
       return;
     }
@@ -366,13 +474,6 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto pb-12">
-      
-      {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-semibold flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-        </div>
-      )}
 
       {/* Card 1: Patient, Dates & Doctor */}
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -405,12 +506,41 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
             </div>
           </div>
 
-          <Input
-            label="Optometrist"
-            placeholder="Name of doctor"
-            value={optometrist}
-            onChange={(e) => setOptometrist(e.target.value)}
-          />
+          <div className="space-y-3">
+            <Select
+              label="Optometrist / Doctor"
+              value={optometristSelect}
+              onChange={(e) => setOptometristSelect(e.target.value)}
+              options={[
+                // Owner / Logged-in fallback option if not already in directory list
+                ...(directoryStaff.length === 0 || !directoryStaff.some(s => s.name === defaultDoctorName) 
+                  ? [{ value: defaultDoctorName, label: `${defaultDoctorName} (Owner/Default Doctor)` }] 
+                  : []),
+                ...directoryStaff
+                  .filter((s: any) => s.role === 'Doctor' && s.isActive)
+                  .map((doc: any) => ({
+                    value: doc.name,
+                    label: doc.isMainDoctor ? `${doc.name} (Default Doctor)` : doc.name
+                  })),
+                ...directoryStaff
+                  .filter((s: any) => s.role === 'Staff' && s.isActive)
+                  .map((stf: any) => ({
+                    value: stf.name,
+                    label: `${stf.name} (Staff)`
+                  })),
+                { value: 'Custom', label: 'Other / Custom Name...' }
+              ]}
+            />
+            {optometristSelect === 'Custom' && (
+              <Input
+                label="Custom Optometrist Name *"
+                placeholder="Enter doctor or staff name"
+                value={customOptometrist}
+                onChange={(e) => setCustomOptometrist(e.target.value)}
+                required
+              />
+            )}
+          </div>
 
           <Select
             label="Status"
@@ -735,6 +865,13 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
           />
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-semibold flex items-center gap-2 animate-fade-in">
+          <AlertCircle className="w-5 h-5" />
+          {error}
+        </div>
+      )}
 
       {/* Form Action Buttons */}
       <div className="flex justify-end gap-3.5">
