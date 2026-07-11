@@ -30,14 +30,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Check local storage for dark mode preference
-    const savedMode = localStorage.getItem('theme');
-    if (savedMode === 'dark' || (!savedMode && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setDarkMode(false);
-      document.documentElement.classList.remove('dark');
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('theme');
+      if (savedMode === 'dark' || (!savedMode && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      } else {
+        setDarkMode(false);
+        document.documentElement.classList.remove('dark');
+      }
     }
 
     // Fetch authenticated user
@@ -45,18 +49,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         const res = await fetch('/api/auth/me');
         if (!res.ok) {
-          router.push('/login');
+          if (isMounted) router.push('/login');
           return;
         }
         const data = await res.json();
-        setShop(data.shop);
+        if (isMounted) {
+          setShop(data.shop);
+        }
       } catch (err) {
-        router.push('/login');
+        if (isMounted) router.push('/login');
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   const toggleDarkMode = () => {
