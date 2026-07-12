@@ -131,6 +131,10 @@ mongoose.connect(MONGODB_URI)
         backupSyncIntervalMs: 60000, // backup session to database every 60 seconds
         dataPath: dataPath
       }),
+      webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+      },
       puppeteer: puppeteerOpts
     });
 
