@@ -38,6 +38,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       const savedMode = localStorage.getItem('theme');
       if (savedMode === 'dark' || (!savedMode && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         setDarkMode(true);
+        
         document.documentElement.classList.add('dark');
       } else {
         setDarkMode(false);
