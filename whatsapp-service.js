@@ -102,16 +102,27 @@ mongoose.connect(MONGODB_URI)
     const userHome = require('os').homedir();
     const dataPath = path.join(userHome, '.saas-opticals-wwebjs-auth');
 
+    const puppeteerOpts = {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    };
+
+    // Locate system Chromium dynamically on production containers
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      puppeteerOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    } else if (fs.existsSync('/usr/bin/chromium')) {
+      puppeteerOpts.executablePath = '/usr/bin/chromium';
+    } else if (fs.existsSync('/usr/bin/chromium-browser')) {
+      puppeteerOpts.executablePath = '/usr/bin/chromium-browser';
+    }
+
     client = new Client({
       authStrategy: new RemoteAuth({
         store: store,
         backupSyncIntervalMs: 60000, // backup session to database every 60 seconds
         dataPath: dataPath
       }),
-      puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      }
+      puppeteer: puppeteerOpts
     });
 
     client.on('qr', async (qr) => {
