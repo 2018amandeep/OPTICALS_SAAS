@@ -52,7 +52,8 @@ RUN npm install
 COPY . .
 
 # Compile production bundle
-ENV MONGODB_URI=mongodb://127.0.0.1:27017/dummy
+ENV MONGODB_URI=mongodb+srv://dreamflyholiday:gcVHWrg2pzDDpYBt@cluster0.bniqctr.mongodb.net/?appName=Cluster0
+
 RUN npm run build
 
 # Expose ports for Next.js (3000) and Express (5001)
