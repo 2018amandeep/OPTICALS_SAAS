@@ -104,7 +104,17 @@ mongoose.connect(MONGODB_URI)
 
     const puppeteerOpts = {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Prevent shared memory issues in Docker
+        '--disable-gpu',           // Disable GPU acceleration
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',        // Drastically reduce RAM overhead
+        '--disable-extensions'
+      ],
+      protocolTimeout: 300000      // 5 minutes timeout to absorb spikes
     };
 
     // Locate system Chromium dynamically on production containers
