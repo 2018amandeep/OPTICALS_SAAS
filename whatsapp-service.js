@@ -111,7 +111,6 @@ mongoose.connect(MONGODB_URI)
         '--disable-gpu',           // Disable GPU acceleration
         '--no-first-run',
         '--no-zygote',
-        '--single-process',        // Drastically reduce RAM overhead
         '--disable-extensions'
       ],
       protocolTimeout: 300000      // 5 minutes timeout to absorb spikes
