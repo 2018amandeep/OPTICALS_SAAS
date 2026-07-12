@@ -111,7 +111,9 @@ mongoose.connect(MONGODB_URI)
         '--disable-gpu',           // Disable GPU acceleration
         '--no-first-run',
         '--no-zygote',
-        '--disable-extensions'
+        '--disable-extensions',
+        '--disable-blink-features=AutomationControlled', // Bypass automated navigator.webdriver detection
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' // Standard Chrome User-Agent
       ],
       protocolTimeout: 300000      // 5 minutes timeout to absorb spikes
     };
@@ -131,9 +133,10 @@ mongoose.connect(MONGODB_URI)
         backupSyncIntervalMs: 60000, // backup session to database every 60 seconds
         dataPath: dataPath
       }),
+      webVersion: '2.3000.1012548071-alpha',
       webVersionCache: {
         type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1012548071-alpha.html'
       },
       puppeteer: puppeteerOpts
     });
