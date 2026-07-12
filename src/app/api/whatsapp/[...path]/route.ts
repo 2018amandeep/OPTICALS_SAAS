@@ -8,6 +8,15 @@ type Context = {
 
 function proxyRequest(method: string, subpath: string, search: string, shopId?: string, body?: any): Promise<{ status: number, data: any }> {
   return new Promise((resolve, reject) => {
+    const serviceUrl = process.env.WHATSAPP_SERVICE_URL || 'http://127.0.0.1:5001';
+    
+    // Parse service URL to support custom hosts and SSL/HTTPS hosting
+    const parsedUrl = new URL(serviceUrl);
+    const hostname = parsedUrl.hostname;
+    const port = parsedUrl.port ? parseInt(parsedUrl.port) : (parsedUrl.protocol === 'https:' ? 443 : 80);
+    const protocol = parsedUrl.protocol;
+    const basePath = parsedUrl.pathname.endsWith('/') ? parsedUrl.pathname.slice(0, -1) : parsedUrl.pathname;
+
     const headers: any = {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
@@ -17,17 +26,20 @@ function proxyRequest(method: string, subpath: string, search: string, shopId?: 
     }
 
     const options = {
-      hostname: '127.0.0.1',
-      port: 5001,
-      path: `/api/whatsapp/${subpath}${search}`,
+      hostname: hostname,
+      port: port,
+      path: `${basePath}/api/whatsapp/${subpath}${search}`,
       method: method,
       headers: headers
     };
 
-    const req = http.request(options, (res) => {
+    // Dynamically require http or https depending on protocol
+    const clientModule = protocol === 'https:' ? require('https') : require('http');
+
+    const req = clientModule.request(options, (res: any) => {
       let rawData = '';
       res.setEncoding('utf8');
-      res.on('data', (chunk) => { rawData += chunk; });
+      res.on('data', (chunk: any) => { rawData += chunk; });
       res.on('end', () => {
         try {
           const parsedData = JSON.parse(rawData);
@@ -38,7 +50,7 @@ function proxyRequest(method: string, subpath: string, search: string, shopId?: 
       });
     });
 
-    req.on('error', (e) => {
+    req.on('error', (e: any) => {
       reject(e);
     });
 
