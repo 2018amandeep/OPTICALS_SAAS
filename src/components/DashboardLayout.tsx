@@ -14,7 +14,8 @@ import {
   Sun, 
   Moon,
   Eye,
-  UserCheck
+  UserCheck,
+  MessageCircle
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -97,6 +98,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Patients', href: '/dashboard/patients', icon: Users },
     { name: 'Orders & Prescriptions', href: '/dashboard/orders', icon: FileText },
     { name: 'Optometrist & Staff', href: '/dashboard/directory', icon: UserCheck },
+    { name: 'WhatsApp Broadcast', href: '/dashboard/broadcast', icon: MessageCircle },
     { name: 'Shop Settings', href: '/dashboard/settings', icon: Settings },
   ];
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Printer, 
   MessageCircle, 
@@ -23,14 +23,25 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
   const patient = order.patientId || {};
   const currencySymbol = shop.currency === 'USD' ? '$' : shop.currency === 'EUR' ? '€' : '₹';
 
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'info' }>({ 
+    show: false, 
+    message: '', 
+    type: 'success' 
+  });
+
+  const triggerToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
   const getSubstitutedMessage = (template: string) => {
-    if (!template) return '';
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const receiptUrl = `${origin}/receipt/${order._id}`;
+    const receiptUrl = typeof window !== 'undefined' ? `${window.location.origin}/receipt/${order._id}` : '';
     return template
       .replace(/{patientName}/g, patient.name || '')
       .replace(/{orderNumber}/g, order.orderNumber || '')
@@ -42,13 +53,13 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
       .replace(/{receiptUrl}/g, receiptUrl);
   };
 
-  const sendWhatsApp = (type: 'order' | 'ready' | 'balance') => {
+  const sendWhatsApp = async (msgType: 'order' | 'ready' | 'balance') => {
     if (!patient.phone) return;
 
     let template = '';
-    if (type === 'ready') {
+    if (msgType === 'ready') {
       template = shop.whatsappTemplateReady || 'Hello {patientName}, your glasses/lenses for order {orderNumber} are ready for pickup at {shopName}. Remaining Balance: {balanceAmount}. View: {receiptUrl}';
-    } else if (type === 'balance') {
+    } else if (msgType === 'balance') {
       template = shop.whatsappTemplateBalance || 'Hello {patientName}, this is a friendly reminder from {shopName} regarding your pending balance of {balanceAmount} for order {orderNumber}. View: {receiptUrl}';
     } else {
       template = shop.whatsappTemplateOrder || 'Hello {patientName}, your order {orderNumber} has been booked at {shopName}. Total: {totalAmount}, Advance: {advanceAmount}, Balance: {balanceAmount}. View: {receiptUrl}';
@@ -61,12 +72,43 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
       sanitizedPhone = '91' + sanitizedPhone; // Default to India country code
     }
 
+    const logType = msgType === 'ready' ? 'ready_msg' : (msgType === 'balance' ? 'balance_msg' : 'order_msg');
+
+    try {
+      const response = await fetch('/api/whatsapp/send-single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone: sanitizedPhone, 
+          message,
+          recipientName: patient.name || 'Customer',
+          type: logType
+        })
+      });
+      
+      if (response.ok) {
+        triggerToast('Notification sent successfully via background WhatsApp Web service!', 'success');
+        return;
+      }
+    } catch (err) {
+      console.log('Background WhatsApp service offline or failed, falling back to browser tab link.');
+    }
+
+    triggerToast('Service offline. Redirecting to WhatsApp web...', 'info');
     const url = `https://wa.me/${sanitizedPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    setTimeout(() => {
+      window.open(url, '_blank');
+    }, 1500);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+      {toast.show && (
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 text-white px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border border-white/10 transition-all duration-300 ${toast.type === 'success' ? 'bg-emerald-600/95 border-emerald-500/20' : 'bg-blue-600/95 border-blue-500/20'}`}>
+          <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+          <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+        </div>
+      )}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-scale-up">
         
         {/* Actions Header */}

@@ -23,6 +23,19 @@ export default function DashboardPage() {
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   const [activeTab, setActiveTab] = useState<'overview' | 'footfall' | 'inventory'>('overview');
 
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'info' }>({ 
+    show: false, 
+    message: '', 
+    type: 'success' 
+  });
+
+  const triggerToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
+
   const fetchStats = async () => {
     try {
       const res = await fetch('/api/stats');
@@ -63,7 +76,7 @@ export default function DashboardPage() {
     }
   };
 
-  const sendWhatsAppReminder = (order: any, type: 'ready' | 'balance') => {
+  const sendWhatsAppReminder = async (order: any, type: 'ready' | 'balance') => {
     if (!order.patientId?.phone) return;
     
     let message = '';
@@ -78,8 +91,36 @@ export default function DashboardPage() {
       message = `Hello ${patientName}, this is a friendly reminder from ${shopName} regarding your pending balance of ${balanceAmount} for order ${orderNumber}. Please make the payment at your convenience. Thank you!`;
     }
 
-    const url = `https://wa.me/91${order.patientId.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    let phone = order.patientId.phone.replace(/[^0-9]/g, '');
+    if (phone.length === 10) {
+      phone = '91' + phone;
+    }
+
+    try {
+      const response = await fetch('/api/whatsapp/send-single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone, 
+          message,
+          recipientName: patientName,
+          type: type === 'ready' ? 'ready_msg' : 'balance_msg'
+        })
+      });
+      
+      if (response.ok) {
+        triggerToast('Reminder notification sent successfully via background WhatsApp Web service!', 'success');
+        return;
+      }
+    } catch (err) {
+      console.log('Background WhatsApp service offline or failed, falling back to browser tab link.');
+    }
+
+    triggerToast('Service offline. Redirecting to WhatsApp web...', 'info');
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    setTimeout(() => {
+      window.open(url, '_blank');
+    }, 1500);
   };
 
   if (loading) {
@@ -691,6 +732,12 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {toast.show && (
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 text-white px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border border-white/10 transition-all duration-300 ${toast.type === 'success' ? 'bg-emerald-600/95 border-emerald-500/20' : 'bg-blue-600/95 border-blue-500/20'}`}>
+          <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+          <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

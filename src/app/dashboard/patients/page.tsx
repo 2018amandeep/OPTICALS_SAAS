@@ -24,7 +24,36 @@ export default function PatientsPage() {
   const [address, setAddress] = useState('');
   const [code, setCode] = useState('');
   const [notes, setNotes] = useState('');
+  const [editingPatient, setEditingPatient] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const openAddModal = () => {
+    setEditingPatient(null);
+    setName('');
+    setPhone('');
+    setEmail('');
+    setAge('');
+    setGender('');
+    setAddress('');
+    setCode('');
+    setNotes('');
+    setError('');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (patient: any) => {
+    setEditingPatient(patient);
+    setName(patient.name || '');
+    setPhone(patient.phone || '');
+    setEmail(patient.email || '');
+    setAge(patient.age ? String(patient.age) : '');
+    setGender(patient.gender || '');
+    setAddress(patient.address || '');
+    setCode(patient.code || '');
+    setNotes(patient.notes || '');
+    setError('');
+    setModalOpen(true);
+  };
 
   const fetchPatients = async (query = '') => {
     try {
@@ -81,15 +110,18 @@ export default function PatientsPage() {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
 
     try {
-      const res = await fetch('/api/patients', {
-        method: 'POST',
+      const url = editingPatient ? `/api/patients/${editingPatient._id}` : '/api/patients';
+      const method = editingPatient ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone: cleanPhone, email, age, gender, address, code, notes }),
       });
       
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to register patient');
+        throw new Error(data.error || `Failed to ${editingPatient ? 'update' : 'register'} patient`);
       }
 
       // Reset form
@@ -101,6 +133,7 @@ export default function PatientsPage() {
       setAddress('');
       setCode('');
       setNotes('');
+      setEditingPatient(null);
       setModalOpen(false);
       fetchPatients(search);
     } catch (err: any) {
@@ -132,8 +165,8 @@ export default function PatientsPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400">Manage patient demographics and ocular histories</p>
         </div>
         <Button 
-          onClick={() => setModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer flex items-center justify-center gap-2"
+          onClick={openAddModal}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer flex items-center justify-center gap-2 font-bold shadow-md shadow-indigo-600/10"
         >
           <Plus className="w-4 h-4" />
           Register Patient
@@ -216,9 +249,17 @@ export default function PatientsPage() {
                         <Link href={`/dashboard/patients/${patient._id}`}>
                           <Button variant="outline" size="sm" className="h-8 text-[11px] font-bold cursor-pointer">
                             <Eye className="w-3.5 h-3.5 mr-1" />
-                            View History
+                            History
                           </Button>
                         </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 w-8 !p-0 flex items-center justify-center cursor-pointer text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/20"
+                          onClick={() => openEditModal(patient)}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -246,7 +287,7 @@ export default function PatientsPage() {
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-2xl">
               <div className="flex items-center gap-2">
                 <User className="w-5 h-5 text-indigo-500" />
-                <h3 className="font-bold text-base">Register New Patient</h3>
+                <h3 className="font-bold text-base">{editingPatient ? 'Edit Patient Details' : 'Register New Patient'}</h3>
               </div>
               <button 
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
