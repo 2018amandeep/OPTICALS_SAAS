@@ -196,6 +196,9 @@ mongoose.connect(MONGODB_URI)
         '--no-first-run',
         '--no-zygote',
         '--single-process',        // Optimize memory usage in containers
+        '--disable-features=IsolateOrigins,site-per-process', // Prevent detached frame errors
+        '--disable-site-isolation-trials',                    // Prevent detached frame errors
+        '--js-flags=--max-old-space-size=512',                // Prevent container memory OOM crashes
         '--disable-extensions',
         '--disable-blink-features=AutomationControlled', // Bypass automated navigator.webdriver detection
         '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' // Standard Chrome User-Agent
