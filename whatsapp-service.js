@@ -92,17 +92,101 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
+// Global variables for WhatsApp initialization
+let store;
+let dataPath;
+let puppeteerOpts;
+
+function initializeWhatsAppClient() {
+  console.log('🧹 Scanning and clearing any stale Puppeteer lock files...');
+  if (dataPath) {
+    removePuppeteerLocks(dataPath);
+  }
+
+  client = new Client({
+    authStrategy: new RemoteAuth({
+      store: store,
+      backupSyncIntervalMs: 60000, // backup session to database every 60 seconds
+      dataPath: dataPath
+    }),
+    webVersion: '2.3000.1043030358-alpha',
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
+      strict: false
+    },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    puppeteer: puppeteerOpts
+  });
+
+  client.on('qr', async (qr) => {
+    latestQrText = qr;
+    clientStatus = 'QR_READY';
+    try {
+      latestQrImage = await QRCode.toDataURL(qr);
+    } catch (err) {
+      console.error('Error generating QR Image:', err);
+    }
+    console.log('👉 WhatsApp QR Code generated. Scan in the web application.');
+  });
+
+  client.on('ready', () => {
+    clientStatus = 'CONNECTED';
+    latestQrText = '';
+    latestQrImage = '';
+    console.log('✅ WhatsApp Web Client is ready (session loaded from MongoDB RemoteAuth)!');
+  });
+
+  client.on('remote_session_saved', () => {
+    console.log('💾 WhatsApp session successfully backed up to MongoDB.');
+  });
+
+  client.on('authenticated', () => {
+    console.log('🔓 Authenticated successfully.');
+  });
+
+  client.on('auth_failure', (msg) => {
+    clientStatus = 'DISCONNECTED';
+    latestQrText = '';
+    latestQrImage = '';
+    console.error('❌ Authentication failed:', msg);
+  });
+
+  client.on('disconnected', (reason) => {
+    clientStatus = 'DISCONNECTED';
+    latestQrText = '';
+    latestQrImage = '';
+    console.log('🔌 Client disconnected, re-initializing...', reason);
+    initializeWhatsAppClient();
+  });
+
+  client.on('loading_screen', (percent, message) => {
+    console.log(`⏳ Loading Screen: ${percent}% - ${message}`);
+  });
+
+  client.on('change_state', (state) => {
+    console.log('🔄 Connection state changed to:', state);
+  });
+
+  console.log('🚀 Initializing WhatsApp Web Client with RemoteAuth...');
+  clientStatus = 'INITIALIZING';
+  client.initialize().catch(err => {
+    console.error('WhatsApp initialization failed:', err);
+    clientStatus = 'DISCONNECTED';
+  });
+}
+
 // Connect to MongoDB for session backup/restore
 console.log('🔌 Connecting to MongoDB for WhatsApp session directory storage...');
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB successfully.');
 
-    const store = new MongoStore({ mongoose: mongoose });
+    store = new MongoStore({ mongoose: mongoose });
     const userHome = require('os').homedir();
-    const dataPath = path.join(userHome, '.saas-opticals-wwebjs-auth');
+    dataPath = path.join(userHome, '.saas-opticals-wwebjs-auth');
 
-    const puppeteerOpts = {
+    puppeteerOpts = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -111,6 +195,7 @@ mongoose.connect(MONGODB_URI)
         '--disable-gpu',           // Disable GPU acceleration
         '--no-first-run',
         '--no-zygote',
+        '--single-process',        // Optimize memory usage in containers
         '--disable-extensions',
         '--disable-blink-features=AutomationControlled', // Bypass automated navigator.webdriver detection
         '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' // Standard Chrome User-Agent
@@ -127,73 +212,8 @@ mongoose.connect(MONGODB_URI)
       puppeteerOpts.executablePath = '/usr/bin/chromium-browser';
     }
 
-    client = new Client({
-      authStrategy: new RemoteAuth({
-        store: store,
-        backupSyncIntervalMs: 60000, // backup session to database every 60 seconds
-        dataPath: dataPath
-      }),
-      webVersion: '2.3000.1043030358-alpha',
-      webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
-        strict: false
-      },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      puppeteer: puppeteerOpts
-    });
-
-    client.on('qr', async (qr) => {
-      latestQrText = qr;
-      clientStatus = 'QR_READY';
-      try {
-        latestQrImage = await QRCode.toDataURL(qr);
-      } catch (err) {
-        console.error('Error generating QR Image:', err);
-      }
-      console.log('👉 WhatsApp QR Code generated. Scan in the web application.');
-    });
-
-    client.on('ready', () => {
-      clientStatus = 'CONNECTED';
-      latestQrText = '';
-      latestQrImage = '';
-      console.log('✅ WhatsApp Web Client is ready (session loaded from MongoDB RemoteAuth)!');
-    });
-
-    client.on('remote_session_saved', () => {
-      console.log('💾 WhatsApp session successfully backed up to MongoDB.');
-    });
-
-    client.on('authenticated', () => {
-      console.log('🔓 Authenticated successfully.');
-    });
-
-    client.on('auth_failure', (msg) => {
-      clientStatus = 'DISCONNECTED';
-      latestQrText = '';
-      latestQrImage = '';
-      console.error('❌ Authentication failed:', msg);
-    });
-
-    client.on('disconnected', (reason) => {
-      clientStatus = 'DISCONNECTED';
-      latestQrText = '';
-      latestQrImage = '';
-      console.log('🔌 Client disconnected, re-initializing...', reason);
-      client.initialize().catch(err => console.error('Re-init error:', err));
-    });
-
     // Start WhatsApp client
-    console.log('🧹 Scanning and clearing any stale Puppeteer lock files...');
-    removePuppeteerLocks(dataPath);
-
-    console.log('🚀 Initializing WhatsApp Web Client with RemoteAuth...');
-    clientStatus = 'INITIALIZING';
-    client.initialize().catch(err => {
-      console.error('WhatsApp initialization failed:', err);
-      clientStatus = 'DISCONNECTED';
-    });
+    initializeWhatsAppClient();
   })
   .catch(err => {
     console.error('❌ MongoDB connection failed for WhatsApp service:', err);
@@ -213,16 +233,61 @@ app.get('/api/whatsapp/status', (req, res) => {
 
 // POST /api/whatsapp/logout: Disconnect and reset authentication session
 app.post('/api/whatsapp/logout', async (req, res) => {
+  console.log('🔄 Logout requested. Initiating session cleanup...');
   try {
-    if (client && clientStatus === 'CONNECTED') {
-      await client.logout();
+    if (client) {
+      // Remove disconnected listener to prevent double initialization during cleanup
+      client.removeAllListeners('disconnected');
+
+      try {
+        await client.logout();
+        console.log('✅ client.logout() succeeded.');
+      } catch (err) {
+        console.warn('⚠️ client.logout() failed (likely already disconnected):', err.message);
+        // Fallback to manual strategy logout if client.logout fails
+        if (client.authStrategy) {
+          try {
+            await client.authStrategy.logout();
+            console.log('✅ client.authStrategy.logout() succeeded.');
+          } catch (strategyErr) {
+            console.error('❌ client.authStrategy.logout() failed:', strategyErr.message);
+          }
+        }
+      }
+
+      try {
+        await client.destroy();
+        console.log('✅ client.destroy() succeeded.');
+      } catch (destroyErr) {
+        console.error('❌ client.destroy() failed:', destroyErr.message);
+      }
     }
+
+    // Explicitly delete local directory to be 100% sure we wipe corrupted state/locks
+    if (dataPath) {
+      const sessionDir = path.join(dataPath, 'RemoteAuth');
+      if (fs.existsSync(sessionDir)) {
+        try {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+          console.log('🧹 Explicitly deleted local session directory:', sessionDir);
+        } catch (e) {
+          console.error('❌ Failed to explicitly delete local session directory:', e.message);
+        }
+      }
+    }
+
+    // Reset status variables
     clientStatus = 'DISCONNECTED';
     latestQrText = '';
     latestQrImage = '';
-    res.json({ message: 'Logged out successfully' });
+
+    // Reconstruct and re-initialize a fresh client
+    console.log('🔄 Re-initializing WhatsApp Web Client after logout...');
+    initializeWhatsAppClient();
+
+    res.json({ message: 'Logged out and reset successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('Logout handler error:', error);
     res.status(500).json({ error: error.message || 'Failed to logout' });
   }
 });

@@ -30,6 +30,7 @@ export default function BroadcastPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Fetch initial patient list and shop profile name
   useEffect(() => {
@@ -202,12 +203,7 @@ export default function BroadcastPage() {
 
   // Disconnect session
   const logoutService = async () => {
-    if (!confirm('Are you sure you want to disconnect WhatsApp and log out?')) return;
-    try {
-      await fetch('/api/whatsapp/logout', { method: 'POST' });
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+    setShowLogoutConfirm(true);
   };
 
   // Cancel campaign
@@ -680,6 +676,47 @@ export default function BroadcastPage() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl space-y-6 transform scale-100 transition-all">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-2xl text-rose-550 dark:text-rose-450 shrink-0">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Disconnect WhatsApp?</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                  Are you sure you want to disconnect WhatsApp and log out? This will completely terminate the active session and delete session files, requiring you to scan the QR code to re-link your device.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-850 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShowLogoutConfirm(false);
+                  try {
+                    await fetch('/api/whatsapp/logout', { method: 'POST' });
+                  } catch (err) {
+                    console.error('Logout failed:', err);
+                  }
+                }}
+                className="px-5 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 hover:shadow-lg hover:shadow-rose-500/20 active:scale-95 transition-all rounded-xl cursor-pointer"
+              >
+                Disconnect & Log Out
+              </button>
+            </div>
           </div>
         </div>
       )}
