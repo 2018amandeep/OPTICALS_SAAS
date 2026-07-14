@@ -6,6 +6,7 @@ import { AlertCircle, UserPlus, Eye, Save, X } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import OrderReceipt from '@/components/OrderReceipt';
 
 // Helper functions to generate dropdown options based on the prescription card
 const generateSphOptions = () => {
@@ -78,6 +79,10 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   // Patient Search Autocomplete
   const [patientSearch, setPatientSearch] = useState('');
   const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
+
+  // Order Details Dialogue Overlay
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<any>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [optometrist, setOptometrist] = useState('Dr. Malhotra');
   const [optometristSelect, setOptometristSelect] = useState('');
   const [customOptometrist, setCustomOptometrist] = useState('');
@@ -127,6 +132,21 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   });
 
   const selectedPatient = patients.find((p) => p._id === patientId) || patientHistory?.patient;
+
+  const handleViewReceipt = async (id: string) => {
+    setLoadingReceipt(true);
+    try {
+      const res = await fetch(`/api/orders/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedReceiptOrder(data.order);
+      }
+    } catch (err) {
+      console.error('Error fetching order receipt:', err);
+    } finally {
+      setLoadingReceipt(false);
+    }
+  };
 
   // Fetch initial patients and order data (if edit)
   useEffect(() => {
@@ -489,7 +509,8 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto pb-12">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto pb-12">
 
       {/* Card 1: Patient, Dates & Doctor */}
       <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -739,7 +760,13 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
                                 {new Date(prevOrder.bookingDate).toLocaleDateString()}
                               </td>
                               <td className="py-2.5 px-3 text-indigo-500 font-bold whitespace-nowrap">
-                                {prevOrder.orderNumber}
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewReceipt(prevOrder._id)}
+                                  className="hover:underline cursor-pointer focus:outline-none"
+                                >
+                                  {prevOrder.orderNumber}
+                                </button>
                               </td>
                               <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                 {prevOrder.optometrist || '--'}
@@ -992,5 +1019,19 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
       </div>
 
     </form>
+      
+      {loadingReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+      )}
+
+      {selectedReceiptOrder && (
+        <OrderReceipt 
+          order={selectedReceiptOrder} 
+          onClose={() => setSelectedReceiptOrder(null)} 
+        />
+      )}
+    </>
   );
 }

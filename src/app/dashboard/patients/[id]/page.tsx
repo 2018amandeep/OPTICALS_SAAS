@@ -17,6 +17,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import OrderReceipt from '@/components/OrderReceipt';
 
 interface PatientProfileProps {
   params: Promise<{ id: string }>;
@@ -30,6 +31,25 @@ export default function PatientProfilePage({ params }: PatientProfileProps) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currencySymbol, setCurrencySymbol] = useState('₹');
+
+  // Order Details Dialogue Overlay
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<any>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
+
+  const handleViewReceipt = async (orderId: string) => {
+    setLoadingReceipt(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedReceiptOrder(data.order);
+      }
+    } catch (err) {
+      console.error('Error fetching order receipt:', err);
+    } finally {
+      setLoadingReceipt(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -65,7 +85,8 @@ export default function PatientProfilePage({ params }: PatientProfileProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       
       {/* Back navigation */}
       <button 
@@ -152,7 +173,12 @@ export default function PatientProfilePage({ params }: PatientProfileProps) {
                   <div key={order._id} className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 hover:border-slate-200 dark:hover:border-slate-800 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{order.orderNumber}</span>
+                        <button
+                          onClick={() => handleViewReceipt(order._id)}
+                          className="font-bold text-indigo-600 hover:text-indigo-850 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline cursor-pointer focus:outline-none text-left"
+                        >
+                          {order.orderNumber}
+                        </button>
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full
                           ${order.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-600' :
                             order.status === 'Ordered' ? 'bg-blue-500/10 text-blue-600' :
@@ -184,12 +210,15 @@ export default function PatientProfilePage({ params }: PatientProfileProps) {
                           {currencySymbol}{order.financials.balance}
                         </p>
                       </div>
-                      <Link href={`/dashboard/orders?id=${order._id}`}>
-                        <Button variant="outline" size="sm" className="h-9 px-3 cursor-pointer">
-                          Details
-                          <ArrowUpRight className="w-3.5 h-3.5 ml-1 text-slate-400" />
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewReceipt(order._id)}
+                        className="h-9 px-3 cursor-pointer"
+                      >
+                        Details
+                        <ArrowUpRight className="w-3.5 h-3.5 ml-1 text-slate-400" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -200,6 +229,20 @@ export default function PatientProfilePage({ params }: PatientProfileProps) {
 
       </div>
 
-    </div>
+      </div>
+      
+      {loadingReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+      )}
+
+      {selectedReceiptOrder && (
+        <OrderReceipt 
+          order={selectedReceiptOrder} 
+          onClose={() => setSelectedReceiptOrder(null)} 
+        />
+      )}
+    </>
   );
 }
