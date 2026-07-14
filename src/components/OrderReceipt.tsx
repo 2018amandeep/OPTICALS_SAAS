@@ -28,6 +28,7 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
     message: '', 
     type: 'success' 
   });
+  const [isWhatsappOpen, setIsWhatsappOpen] = useState(false);
 
   const triggerToast = (message: string, type: 'success' | 'info' = 'success') => {
     setToast({ show: true, message, type });
@@ -109,13 +110,13 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
           <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
         </div>
       )}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-scale-up">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl animate-scale-up">
         
         {/* Actions Header */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-2xl gap-3 no-print">
           <div className="flex items-center gap-2">
             <Eye className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-bold text-sm sm:text-base">Prescription & Receipt Receipt</h3>
+            <h3 className="font-bold text-sm sm:text-base">Prescription & Order Receipt</h3>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -128,30 +129,46 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
               Print Receipt
             </Button>
             <div className="relative group">
+              {isWhatsappOpen && (
+                <div 
+                  className="fixed inset-0 z-40 bg-transparent" 
+                  onClick={() => setIsWhatsappOpen(false)}
+                />
+              )}
               <Button 
                 variant="success" 
                 size="sm" 
-                className="cursor-pointer font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center"
+                onClick={() => setIsWhatsappOpen(!isWhatsappOpen)}
+                className="cursor-pointer font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center relative z-50"
               >
                 <MessageCircle className="w-4 h-4 mr-1.5" />
                 Notify WhatsApp
               </Button>
-              <div className="absolute right-0 top-full pt-1.5 hidden group-hover:block z-50 w-44">
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-2 font-semibold text-xs space-y-1">
+              <div className={`absolute right-0 top-full pt-1.5 z-50 w-44 ${isWhatsappOpen ? 'block' : 'hidden group-hover:block'}`}>
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-2 font-semibold text-xs space-y-1 relative z-50">
                   <button 
-                    onClick={() => sendWhatsApp('order')}
+                    onClick={() => {
+                      sendWhatsApp('order');
+                      setIsWhatsappOpen(false);
+                    }}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-slate-700 dark:text-slate-200"
                   >
                     Order Booked Msg
                   </button>
                   <button 
-                    onClick={() => sendWhatsApp('ready')}
+                    onClick={() => {
+                      sendWhatsApp('ready');
+                      setIsWhatsappOpen(false);
+                    }}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-slate-700 dark:text-slate-200"
                   >
                     Glasses Ready Msg
                   </button>
                   <button 
-                    onClick={() => sendWhatsApp('balance')}
+                    onClick={() => {
+                      sendWhatsApp('balance');
+                      setIsWhatsappOpen(false);
+                    }}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-slate-700 dark:text-slate-200"
                   >
                     Balance Reminder
@@ -160,7 +177,7 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
               </div>
             </div>
             <button 
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer ml-1 p-1"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer ml-1 p-1 relative z-50"
               onClick={onClose}
             >
               <X className="w-5 h-5" />
@@ -169,10 +186,10 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
         </div>
 
         {/* Modal Scrollable Receipt Viewport */}
-        <div className="p-8 overflow-y-auto flex justify-center items-start bg-slate-100 dark:bg-slate-950/40">
+        <div className="flex-1 p-3 sm:p-8 overflow-y-auto overflow-x-hidden flex justify-center items-start bg-slate-100 dark:bg-slate-950/40 w-full">
           
           {/* Malhotra Opticals Physical Replica Card */}
-          <div id="print-area" className="print-area w-full max-w-[650px] p-6 bg-white border border-blue-200 rounded-lg text-slate-900 shadow-md font-sans h-fit flex-shrink-0">
+          <div id="print-area" className="print-area w-full max-w-[650px] p-4 sm:p-6 bg-white border border-blue-200 rounded-lg text-slate-900 shadow-md font-sans h-fit flex-shrink-0">
             
             <style jsx global>{`
               @media print {
@@ -196,10 +213,10 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
             `}</style>
 
             {/* Malhotra Opticals Header */}
-            <div className="flex justify-between items-start border-b-2 border-blue-900 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-blue-900 pb-4 gap-3 w-full">
               <div className="flex items-center gap-3">
                 {/* Visual Eye Logo Representation */}
-                <div className="h-14 w-14 border-2 border-blue-900 text-blue-900 rounded-lg flex flex-col items-center justify-center relative overflow-hidden font-bold">
+                <div className="h-14 w-14 border-2 border-blue-900 text-blue-900 rounded-lg flex flex-col items-center justify-center relative overflow-hidden font-bold flex-shrink-0">
                   <div className="w-8 h-4 border-2 border-blue-900 rounded-full flex items-center justify-center">
                     <div className="w-2.5 h-2.5 bg-blue-900 rounded-full"></div>
                   </div>
@@ -211,7 +228,7 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
               </div>
 
               {/* Shop contact header details */}
-              <div className="text-right text-[10px] font-semibold text-blue-900 max-w-[250px] space-y-0.5 leading-tight">
+              <div className="sm:text-right text-left text-[10px] font-semibold text-blue-900 max-w-[250px] space-y-0.5 leading-tight">
                 <p className="font-bold">{shop.address || '1655, Multani Mohalla, Behind NDPL Office, Rani Bagh, Delhi-110034'}</p>
                 <p>Mob: {shop.phone || '9811075234'}</p>
                 {shop.email && <p>Email: {shop.email}</p>}
@@ -219,7 +236,7 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
             </div>
 
             {/* Patient Metadata Grid */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-xs text-blue-900 border-b border-blue-100 pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-4 text-xs text-blue-900 border-b border-blue-100 pb-4">
               <div className="space-y-1.5 font-semibold">
                 <p><span className="text-blue-600 font-medium">Name:</span> <span className="text-slate-900 font-bold">{patient.name}</span></p>
                 <p><span className="text-blue-600 font-medium">Age:</span> <span className="text-slate-900 font-bold">{patient.age || '--'}</span></p>
@@ -228,7 +245,7 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
                 <p><span className="text-blue-600 font-medium">Ph:</span> <span className="text-slate-900 font-bold">{patient.phone || '--'}</span></p>
               </div>
 
-              <div className="space-y-1.5 font-semibold text-right sm:text-left">
+              <div className="space-y-1.5 font-semibold text-left">
                 <p><span className="text-blue-600 font-medium">Code:</span> <span className="text-slate-900 font-bold">{patient.code || '--'}</span></p>
                 <p><span className="text-blue-600 font-medium">Order / Booking No:</span> <span className="text-slate-900 font-bold">{order.orderNumber}</span></p>
                 <p><span className="text-blue-600 font-medium">Booking Date:</span> <span className="text-slate-900 font-bold">{order.bookingDate ? new Date(order.bookingDate).toLocaleDateString() : '--'}</span></p>
@@ -241,44 +258,46 @@ export default function OrderReceipt({ order, onClose }: OrderReceiptProps) {
             <div className="mt-5 space-y-4">
               <h4 className="text-xs font-extrabold text-blue-900 uppercase tracking-widest text-center border-y border-blue-900 py-1.5">Prescription Matrix</h4>
               
-              <table className="w-full border border-blue-900 text-center text-xs font-semibold text-blue-900">
-                <thead>
-                  <tr className="bg-blue-50 border-b border-blue-900">
-                    <th className="py-2 px-3 border-r border-blue-900">EYE</th>
-                    <th className="py-2 px-3 border-r border-blue-900">SPH</th>
-                    <th className="py-2 px-3 border-r border-blue-900">CYL</th>
-                    <th className="py-2 px-3 border-r border-blue-900">AXIS</th>
-                    <th className="py-2 px-3">VSN (Vision)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-blue-900">
-                    <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">RIGHT (OD)</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.sph || '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.cyl || '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.axis || '--'}</td>
-                    <td className="py-2 px-3 text-slate-900 font-bold">{order.prescription?.right?.vsn || '--'}</td>
-                  </tr>
-                  <tr className="border-b border-blue-900">
-                    <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">LEFT (OS)</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.sph || '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.cyl || '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.axis || '--'}</td>
-                    <td className="py-2 px-3 text-slate-900 font-bold">{order.prescription?.left?.vsn || '--'}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">ADD (Near)</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.add ? `R.E. ${order.prescription.right.add}` : '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.add ? `L.E. ${order.prescription.left.add}` : '--'}</td>
-                    <td className="py-2 px-3 border-r border-blue-900 text-slate-400 font-bold">-</td>
-                    <td className="py-2 px-3 text-slate-400 font-bold">-</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="overflow-x-auto w-full">
+                <table className="min-w-[500px] sm:min-w-0 w-full border border-blue-900 text-center text-xs font-semibold text-blue-900">
+                  <thead>
+                    <tr className="bg-blue-50 border-b border-blue-900">
+                      <th className="py-2 px-3 border-r border-blue-900">EYE</th>
+                      <th className="py-2 px-3 border-r border-blue-900">SPH</th>
+                      <th className="py-2 px-3 border-r border-blue-900">CYL</th>
+                      <th className="py-2 px-3 border-r border-blue-900">AXIS</th>
+                      <th className="py-2 px-3">VSN (Vision)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-blue-900">
+                      <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">RIGHT (OD)</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.sph || '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.cyl || '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.axis || '--'}</td>
+                      <td className="py-2 px-3 text-slate-900 font-bold">{order.prescription?.right?.vsn || '--'}</td>
+                    </tr>
+                    <tr className="border-b border-blue-900">
+                      <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">LEFT (OS)</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.sph || '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.cyl || '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.axis || '--'}</td>
+                      <td className="py-2 px-3 text-slate-900 font-bold">{order.prescription?.left?.vsn || '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3 border-r border-blue-900 font-bold bg-blue-50/30">ADD (Near)</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.right?.add ? `R.E. ${order.prescription.right.add}` : '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-900 font-bold">{order.prescription?.left?.add ? `L.E. ${order.prescription.left.add}` : '--'}</td>
+                      <td className="py-2 px-3 border-r border-blue-900 text-slate-400 font-bold">-</td>
+                      <td className="py-2 px-3 text-slate-400 font-bold">-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Frame details, lens details, IPD parameters */}
-            <div className="grid grid-cols-2 gap-4 mt-5 border-t border-blue-100 pt-4 text-xs font-semibold text-blue-900">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 border-t border-blue-100 pt-4 text-xs font-semibold text-blue-900">
               <div className="space-y-2">
                 <p><span className="text-blue-600 font-medium">Shape Change:</span> <span className="text-slate-900 font-bold">{order.shapeChange || 'No'}</span></p>
                 <p><span className="text-blue-600 font-medium">Contact Lens:</span> <span className="text-slate-900 font-bold">{order.contactLens || 'No'}</span></p>

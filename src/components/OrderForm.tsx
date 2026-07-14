@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, UserPlus, Eye, Save } from 'lucide-react';
+import { AlertCircle, UserPlus, Eye, Save, X } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -74,6 +74,10 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   const [patientHistory, setPatientHistory] = useState<any>(null);
   const [patientNotes, setPatientNotes] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Patient Search Autocomplete
+  const [patientSearch, setPatientSearch] = useState('');
+  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
   const [optometrist, setOptometrist] = useState('Dr. Malhotra');
   const [optometristSelect, setOptometristSelect] = useState('');
   const [customOptometrist, setCustomOptometrist] = useState('');
@@ -111,6 +115,18 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
   // Status
   const [status, setStatus] = useState('Ordered');
   const [notes, setNotes] = useState('');
+
+  const filteredPatients = patients.filter((p) => {
+    const query = patientSearch.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      (p.name && p.name.toLowerCase().includes(query)) ||
+      (p.phone && p.phone.toLowerCase().includes(query)) ||
+      (p.code && p.code.toLowerCase().includes(query))
+    );
+  });
+
+  const selectedPatient = patients.find((p) => p._id === patientId) || patientHistory?.patient;
 
   // Fetch initial patients and order data (if edit)
   useEffect(() => {
@@ -481,20 +497,102 @@ export default function OrderForm({ orderId, prefilledPatientId }: OrderFormProp
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="sm:col-span-2">
-            <Select
-              label="Select Patient *"
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-              options={[]}
-              required
-            >
-              <option value="">-- Choose Patient --</option>
-              {patients.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name} ({p.phone}) {p.code ? `- [${p.code}]` : ''}
-                </option>
-              ))}
-            </Select>
+            {selectedPatient ? (
+              <div className="w-full flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  Selected Patient *
+                </label>
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg border text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-950 dark:text-slate-50">{selectedPatient.name}</span>
+                    <span className="text-xs text-slate-550 dark:text-slate-400 font-medium">({selectedPatient.phone})</span>
+                    {selectedPatient.code && (
+                      <span className="text-xs bg-indigo-550/10 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded font-bold text-indigo-500 dark:text-indigo-400">
+                        {selectedPatient.code}
+                      </span>
+                    )}
+                  </div>
+                  {!prefilledPatientId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPatientId('');
+                        setPatientSearch('');
+                      }}
+                      className="text-xs font-bold text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 cursor-pointer transition-colors"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full flex flex-col gap-1.5 relative">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  Select Patient *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search patient by name or phone..."
+                    value={patientSearch}
+                    onChange={(e) => {
+                      setPatientSearch(e.target.value);
+                      setIsPatientDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsPatientDropdownOpen(true)}
+                    className="w-full px-3 py-2 rounded-lg border text-sm transition-all duration-200 outline-none
+                      bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100
+                      focus:border-primary dark:focus:border-accent focus:ring-1 focus:ring-primary dark:focus:ring-accent
+                      placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                  />
+                  {patientSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setPatientSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {isPatientDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10 bg-transparent" 
+                      onClick={() => setIsPatientDropdownOpen(false)} 
+                    />
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg max-h-60 overflow-y-auto z-20 p-1 divide-y divide-slate-50 dark:divide-slate-850">
+                      {filteredPatients.length > 0 ? (
+                        filteredPatients.map((p) => (
+                          <button
+                            key={p._id}
+                            type="button"
+                            onClick={() => {
+                              setPatientId(p._id);
+                              setPatientSearch('');
+                              setIsPatientDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex flex-col gap-0.5 text-xs text-slate-700 dark:text-slate-200 transition-colors"
+                          >
+                            <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{p.name}</span>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                              <span>Phone: {p.phone}</span>
+                              {p.code && <span>• Code: {p.code}</span>}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-4 text-center text-slate-500 dark:text-slate-600 text-xs font-semibold">
+                          No matching patients found
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <div className="mt-1.5 flex justify-end">
               <span 
                 onClick={() => router.push('/dashboard/patients')}
